@@ -7,6 +7,8 @@ on:
     branches: [
       master
     ]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches: [
       master
@@ -18,7 +20,7 @@ jobs:
     strategy:
       matrix:
         python-version: [
-          "3.9", "3.10", "3.11", "3.12", "3.13"
+          '3.9', '3.10', '3.11', '3.12', '3.13'
         ]
     steps:
     - uses: actions/checkout@master
@@ -34,3 +36,10 @@ jobs:
       run: |
         coverage run -m pytest
         coverage report
+    - name: Submit Coverage to Coveralls
+      if: matrix.python-version == '3.12'
+      run: |
+        pip install coveralls pyyaml
+        coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
