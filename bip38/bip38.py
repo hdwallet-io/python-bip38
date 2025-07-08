@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright © 2023-2024, Meheret Tesfaye Batu <meherett.batu@gmail.com>
+# Copyright © 2023-2025, Meheret Tesfaye Batu <meherett.batu@gmail.com>
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit
 
@@ -27,7 +27,7 @@ from .crypto import (
     double_sha256, get_checksum
 )
 from .const import (
-    N,
+    NP,
     MAGIC_LOT_AND_SEQUENCE,
     MAGIC_NO_LOT_AND_SEQUENCE,
     NO_EC_MULTIPLIED_WIF_FLAG,
@@ -93,7 +93,8 @@ class BIP38:
         passphrase: str,
         lot: Optional[int] = None,
         sequence: Optional[int] = None,
-        owner_salt: Optional[Union[str, bytes]] = None
+        owner_salt: Optional[Union[str, bytes]] = None,
+        N: int = 16384, r: int = 8, p: int = 8
     ) -> str:
         """
         Generates an intermediate passphrase.
@@ -104,8 +105,14 @@ class BIP38:
         :type lot: Optional[int]
         :param sequence: Optional sequence number (0-4095).
         :type sequence: Optional[int]
-        :param owner_salt: Optional owner salt (default: random 8 bytes).
+        :param owner_salt: Optional owner salt. (default: ``random 8 bytes``)
         :type owner_salt: Optional[str, bytes]
+        :param N: CPU/memory cost parameter (must be a power of two > 1). Higher values increase security but require more resources. (default: ``16384``)
+        :type N: int
+        :param r: Block size parameter. Controls memory usage. Must be > 0. (default: ``8``)
+        :type r: int
+        :param p: Parallelization parameter. Defines how many threads can run in parallel. Must be > 0. (default: ``8``)
+        :type p: int
 
         :returns: The intermediate passphrase.
         :rtype: str
@@ -134,12 +141,12 @@ class BIP38:
             if not 0 <= sequence <= 4095:
                 raise Error("Invalid sequence", expected="0 <= sequence <= 4095", got=sequence)
 
-            pre_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt[:4], 16384, 8, 8, 32)
+            pre_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt[:4], N=N, r=r, p=p, buflen=32)
             owner_entropy: bytes = owner_salt[:4] + integer_to_bytes((lot * 4096 + sequence), 4)
             pass_factor: bytes = double_sha256(pre_factor + owner_entropy)
             magic: bytes = integer_to_bytes(MAGIC_LOT_AND_SEQUENCE)
         else:
-            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, 16384, 8, 8, 32)
+            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
             magic: bytes = integer_to_bytes(MAGIC_NO_LOT_AND_SEQUENCE)
             owner_entropy: bytes = owner_salt
 
@@ -150,7 +157,9 @@ class BIP38:
             magic + owner_entropy + pass_point.raw_compressed()
         ))
 
-    def encrypt(self, wif: str, passphrase: str, network: Optional[str] = None) -> str:
+    def encrypt(
+        self, wif: str, passphrase: str, network: Optional[str] = None, N: int = 16384, r: int = 8, p: int = 8
+    ) -> str:
         """
         Encrypts a Wallet Import Format (WIF) key using a passphrase with BIP38 encryption.
 
@@ -160,6 +169,12 @@ class BIP38:
         :type passphrase: str
         :param network: Optional network for encryption. Defaults to the class's network if not provided.
         :type network: Optional[str]
+        :param N: CPU/memory cost parameter (must be a power of two > 1). Higher values increase security but require more resources. (default: ``16384``)
+        :type N: int
+        :param r: Block size parameter. Controls memory usage. Must be > 0. (default: ``8``)
+        :type r: int
+        :param p: Parallelization parameter. Defines how many threads can run in parallel. Must be > 0. (default: ``8``)
+        :type p: int
 
         :returns: Encrypted WIF key as a string.
         :rtype: str
@@ -204,7 +219,7 @@ class BIP38:
             public_key_type=public_key_type
         )
         address_hash: bytes = get_checksum(get_bytes(address, unhexlify=False))
-        key: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), address_hash, 16384, 8, 8)
+        key: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), address_hash, N=N, r=r, p=p)
         derived_half_1, derived_half_2 = key[0:32], key[32:64]
 
         aes: AESModeOfOperationECB = AESModeOfOperationECB(derived_half_2)
@@ -236,7 +251,7 @@ class BIP38:
 
         :param intermediate_passphrase: The intermediate passphrase.
         :type intermediate_passphrase: str
-        :param wif_type: The WIF type, either 'wif' or 'wif-compressed' (default is 'wif').
+        :param wif_type: The WIF type, either ``wif`` or ``wif-compressed``. (default is ``wif``)
         :type wif_type: str
         :param seed: Optional seed (default: random 24 bytes).
         :type seed: Optional[str, bytes]
@@ -298,7 +313,7 @@ class BIP38:
             )
 
         factor_b: bytes = double_sha256(seed_b)
-        if not 0 < bytes_to_integer(factor_b) < N:
+        if not 0 < bytes_to_integer(factor_b) < NP:
             raise Error("Invalid EC encrypted WIF (Wallet Import Format)")
 
         public_key: PublicKey = PublicKey.from_point(
@@ -355,7 +370,7 @@ class BIP38:
         )
 
     def confirm_code(
-        self, passphrase: str, confirmation_code: str, network: Optional[str] = None, detail: bool = False
+        self, passphrase: str, confirmation_code: str, network: Optional[str] = None, detail: bool = False, N: int = 16384, r: int = 8, p: int = 8
     ) -> Union[str, dict]:
         """
         Confirms the passphrase using a confirmation code.
@@ -366,8 +381,14 @@ class BIP38:
         :type confirmation_code: str
         :param network: Optional network for encryption. Defaults to the class's network if not provided.
         :type network: Optional[str]
-        :param detail: Whether to return detailed info (default: False).
+        :param detail: Whether to return detailed info. (default: ``False``)
         :type detail: bool
+        :param N: CPU/memory cost parameter (must be a power of two > 1). Higher values increase security but require more resources. (default: ``16384``)
+        :type N: int
+        :param r: Block size parameter. Controls memory usage. Must be > 0. (default: ``8``)
+        :type r: int
+        :param p: Parallelization parameter. Defines how many threads can run in parallel. Must be > 0. (default: ``8``)
+        :type p: int
 
         :returns: Confirmation result as a string or detailed info as a dictionary.
         :rtype: Union[str, dict]
@@ -412,10 +433,10 @@ class BIP38:
         else:
             owner_salt: bytes = owner_entropy
 
-        pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, 16384, 8, 8, 32)
+        pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
         if lot_and_sequence:
             pass_factor: bytes = double_sha256(pass_factor + owner_entropy)
-        if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= N:
+        if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= NP:
             raise Error("Invalid EC encrypted WIF (Wallet Import Format)")
 
         pass_point: bytes = PrivateKey.from_bytes(pass_factor).public_key().raw_compressed()
@@ -470,7 +491,7 @@ class BIP38:
         raise PassphraseError("Incorrect passphrase")
 
     def decrypt(
-        self, encrypted_wif: str, passphrase: str, network: Optional[str] = None, detail: bool = False
+        self, encrypted_wif: str, passphrase: str, network: Optional[str] = None, detail: bool = False, N: int = 16384, r: int = 8, p: int = 8
     ) -> Union[str, dict]:
         """
         Decrypts an encrypted WIF (Wallet Import Format) using a passphrase.
@@ -481,8 +502,14 @@ class BIP38:
         :type passphrase: str
         :param network: Optional network for encryption. Defaults to the class's network if not provided.
         :type network: Optional[str]
-        :param detail: Whether to return detailed info (default: False).
+        :param detail: Whether to return detailed info. (default: ``False``)
         :type detail: bool
+        :param N: CPU/memory cost parameter (must be a power of two > 1). Higher values increase security but require more resources. (default: ``16384``)
+        :type N: int
+        :param r: Block size parameter. Controls memory usage. Must be > 0. (default: ``8``)
+        :type r: int
+        :param p: Parallelization parameter. Defines how many threads can run in parallel. Must be > 0. (default: ``8``)
+        :type p: int
 
         :returns: The decrypted WIF or detailed private key info.
         :rtype: Union[str, dict]
@@ -530,7 +557,7 @@ class BIP38:
                 )
 
             key: bytes = scrypt.hash(
-                unicodedata.normalize("NFC", passphrase), address_hash, 16384, 8, 8
+                unicodedata.normalize("NFC", passphrase), address_hash, N=N, r=r, p=p
             )
             derived_half_1, derived_half_2 = key[0:32], key[32:64]
             encrypted_half_1: bytes = encrypted_wif_decode[7:23]
@@ -543,7 +570,7 @@ class BIP38:
             private_key: bytes = integer_to_bytes(
                 bytes_to_integer(decrypted_half_1 + decrypted_half_2) ^ bytes_to_integer(derived_half_1)
             )
-            if bytes_to_integer(private_key) == 0 or bytes_to_integer(private_key) >= N:
+            if bytes_to_integer(private_key) == 0 or bytes_to_integer(private_key) >= NP:
                 raise Error("Invalid Non-EC encrypted WIF (Wallet Import Format)")
 
             public_key: PublicKey = PrivateKey.from_bytes(private_key).public_key()
@@ -584,10 +611,10 @@ class BIP38:
             else:
                 owner_salt: bytes = owner_entropy
 
-            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, 16384, 8, 8, 32)
+            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
             if lot_and_sequence:
                 pass_factor: bytes = double_sha256(pass_factor + owner_entropy)
-            if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= N:
+            if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= NP:
                 raise Error("Invalid EC encrypted WIF (Wallet Import Format)")
 
             pre_public_key: PublicKey = PrivateKey.from_bytes(pass_factor).public_key()
@@ -609,12 +636,12 @@ class BIP38:
             ) + encrypted_half_1_half_2_seed_b_last_3[8:]
 
             factor_b: bytes = double_sha256(seed_b)
-            if bytes_to_integer(factor_b) == 0 or bytes_to_integer(factor_b) >= N:
+            if bytes_to_integer(factor_b) == 0 or bytes_to_integer(factor_b) >= NP:
                 raise Error("Invalid EC encrypted WIF (Wallet Import Format)")
 
             # multiply private key
             private_key: bytes = integer_to_bytes(
-                (bytes_to_integer(pass_factor) * bytes_to_integer(factor_b)) % N
+                (bytes_to_integer(pass_factor) * bytes_to_integer(factor_b)) % NP
             )
             public_key: PublicKey = PrivateKey.from_bytes(private_key).public_key()
             wif_type: Literal["wif", "wif-compressed"] = "wif"

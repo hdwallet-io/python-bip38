@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright © 2023-2024, Meheret Tesfaye Batu <meherett.batu@gmail.com>
+# Copyright © 2023-2025, Meheret Tesfaye Batu <meherett.batu@gmail.com>
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit
 
@@ -25,7 +25,7 @@ MAGIC_NO_LOT_AND_SEQUENCE_COMPRESSED_FLAG: int = 0x20
 # Confirmation code prefix
 CONFIRMATION_CODE_PREFIX: int = 0x643bf6a89a
 # Number of points in the field
-N: int = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+NP: int = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 # Coordinate point length
 COORDINATE_POINT_LENGTH: int = 32
 # Private key length & prefixes
