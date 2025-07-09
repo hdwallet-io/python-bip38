@@ -1,5 +1,20 @@
 # Changelog
 
+## [v1.4.0](https://github.com/hdwallet-io/python-bip38/tree/v1.4.0) (2025-07-09)
+
+[Full Changelog](https://github.com/hdwallet-io/python-bip38/compare/v1.3.1...v1.4.0)
+
+**New Additions:**
+
+- Add custom new agreements for `secret,hash` function. [@kamikazechaser](https://github.com/kamikazechaser)
+  - `N` CPU/memory cost parameter (must be a power of two > 1).
+  - `r`: Block size parameter. Controls memory usage.
+  - `p`: Parallelization parameter. Defines how many threads can run in parallel.
+
+**Closed issues:**
+
+- [[#5](https://github.com/hdwallet-io/python-bip38/issues/5)] Support for a custom N option for script
+
 ## [v1.3.1](https://github.com/hdwallet-io/python-bip38/tree/v1.3.1) (2024-12-01)
 
 [Full Changelog](https://github.com/hdwallet-io/python-bip38/compare/v1.3.0...v1.3.1)
