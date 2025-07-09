@@ -55,7 +55,7 @@ exclude_patterns = []
 # a list of builtin themes.
 html_theme = "furo"
 # Product logo name
-html_logo = "static/svg/bip38-logo.svg"
+# html_logo = "static/svg/bip38-logo.svg"
 # Theme options
 html_theme_options = {
     # "canonical_url": "",

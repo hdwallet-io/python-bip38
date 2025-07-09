@@ -1,27 +1,35 @@
 table.docutils {
-    margin-left: 5px;
-    margin-right: auto;
+  margin-left: 5px;
+  margin-right: auto;
 }
 
 th {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 td, th {
-    text-align: center;
-    min-width: 20px;
+  text-align: center;
+  min-width: 20px;
 }
 
 .name {
-    text-align: left;
+  text-align: left;
+}
+
+.project-title {
+  font-size: 1.7rem;
+  font-weight: bold;
+  text-align: center;
+  color: var(--color-sidebar-brand-text);
+  margin-top: 0.5rem;
 }
 
 .sidebar-logo-container img {
-    width: 100px;
-    height: auto;
+  width: 100px;
+  height: auto;
 }
 
 .sidebar-brand-text {
-    text-align: center;
-    font-size: 19px;
+  text-align: center;
+  font-size: 1.2rem;
 }
