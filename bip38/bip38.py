@@ -8,8 +8,8 @@ from typing import (
     Type, Union, Optional, Literal, List
 )
 from pyaes import AESModeOfOperationECB
+from Crypto.Protocol.KDF import scrypt
 
-import scrypt
 import unicodedata
 import os
 
@@ -141,12 +141,16 @@ class BIP38:
             if not 0 <= sequence <= 4095:
                 raise Error("Invalid sequence", expected="0 <= sequence <= 4095", got=sequence)
 
-            pre_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt[:4], N=N, r=r, p=p, buflen=32)
+            pre_factor: bytes = scrypt(
+                unicodedata.normalize("NFC", passphrase).encode("utf-8"), owner_salt[:4], key_len=32, N=N, r=r, p=p
+            )
             owner_entropy: bytes = owner_salt[:4] + integer_to_bytes((lot * 4096 + sequence), 4)
             pass_factor: bytes = double_sha256(pre_factor + owner_entropy)
             magic: bytes = integer_to_bytes(MAGIC_LOT_AND_SEQUENCE)
         else:
-            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
+            pass_factor: bytes = scrypt(
+                unicodedata.normalize("NFC", passphrase).encode("utf-8"), owner_salt, key_len=32, N=N, r=r, p=p
+            )
             magic: bytes = integer_to_bytes(MAGIC_NO_LOT_AND_SEQUENCE)
             owner_entropy: bytes = owner_salt
 
@@ -219,7 +223,9 @@ class BIP38:
             public_key_type=public_key_type
         )
         address_hash: bytes = get_checksum(get_bytes(address, unhexlify=False))
-        key: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), address_hash, N=N, r=r, p=p)
+        key: bytes = scrypt(
+            unicodedata.normalize("NFC", passphrase).encode("utf-8"), address_hash, key_len=64, N=N, r=r, p=p
+        )
         derived_half_1, derived_half_2 = key[0:32], key[32:64]
 
         aes: AESModeOfOperationECB = AESModeOfOperationECB(derived_half_2)
@@ -326,7 +332,7 @@ class BIP38:
         )
         address_hash: bytes = get_checksum(get_bytes(address, unhexlify=False))
         salt: bytes = address_hash + owner_entropy
-        scrypt_hash: bytes = scrypt.hash(pass_point, salt, 1024, 1, 1, 64)
+        scrypt_hash: bytes = scrypt(pass_point, salt, 64, 1024, 1, 1)
         derived_half_1, derived_half_2, key = scrypt_hash[:16], scrypt_hash[16:32], scrypt_hash[32:]
 
         aes: AESModeOfOperationECB = AESModeOfOperationECB(key)
@@ -433,7 +439,9 @@ class BIP38:
         else:
             owner_salt: bytes = owner_entropy
 
-        pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
+        pass_factor: bytes = scrypt(
+            unicodedata.normalize("NFC", passphrase).encode("utf-8"), owner_salt, key_len=32, N=N, r=r, p=p
+        )
         if lot_and_sequence:
             pass_factor: bytes = double_sha256(pass_factor + owner_entropy)
         if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= NP:
@@ -441,7 +449,7 @@ class BIP38:
 
         pass_point: bytes = PrivateKey.from_bytes(pass_factor).public_key().raw_compressed()
         salt: bytes = address_hash + owner_entropy
-        scrypt_hash: bytes = scrypt.hash(pass_point, salt, 1024, 1, 1, 64)
+        scrypt_hash: bytes = scrypt(pass_point, salt, 64, 1024, 1, 1)
         derived_half_1, derived_half_2, key = encrypted_point_b[1:17], encrypted_point_b[17:], scrypt_hash[32:]
 
         aes: AESModeOfOperationECB = AESModeOfOperationECB(key)
@@ -556,8 +564,8 @@ class BIP38:
                     ], got=bytes_to_string(flag)
                 )
 
-            key: bytes = scrypt.hash(
-                unicodedata.normalize("NFC", passphrase), address_hash, N=N, r=r, p=p
+            key: bytes = scrypt(
+                unicodedata.normalize("NFC", passphrase).encode("utf-8"), address_hash, key_len=64, N=N, r=r, p=p
             )
             derived_half_1, derived_half_2 = key[0:32], key[32:64]
             encrypted_half_1: bytes = encrypted_wif_decode[7:23]
@@ -611,7 +619,9 @@ class BIP38:
             else:
                 owner_salt: bytes = owner_entropy
 
-            pass_factor: bytes = scrypt.hash(unicodedata.normalize("NFC", passphrase), owner_salt, N=N, r=r, p=p, buflen=32)
+            pass_factor: bytes = scrypt(
+                unicodedata.normalize("NFC", passphrase).encode("utf-8"), owner_salt, key_len=32, N=N, r=r, p=p
+            )
             if lot_and_sequence:
                 pass_factor: bytes = double_sha256(pass_factor + owner_entropy)
             if bytes_to_integer(pass_factor) == 0 or bytes_to_integer(pass_factor) >= NP:
@@ -619,7 +629,7 @@ class BIP38:
 
             pre_public_key: PublicKey = PrivateKey.from_bytes(pass_factor).public_key()
             salt = address_hash + owner_entropy
-            encrypted_seed_b: bytes = scrypt.hash(pre_public_key.raw_compressed(), salt, 1024, 1, 1, 64)
+            encrypted_seed_b: bytes = scrypt(pre_public_key.raw_compressed(), salt, 64, 1024, 1, 1)
             key: bytes = encrypted_seed_b[32:]
 
             aes: AESModeOfOperationECB = AESModeOfOperationECB(key)
