@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.4.1](https://github.com/hdwallet-io/python-bip38/tree/v1.4.1) (2025-07-12)
+
+[Full Changelog](https://github.com/hdwallet-io/python-bip38/compare/v1.4.0...v1.4.1)
+
+**Enhancements:**
+
+- Fix OpenSSL issue in Windows-OS
+
+**Dependencies:**
+
+- Add: `pycryptodome` 3.23.0,<4 package
+- Drop: `script` 0.8.20,<1 package
+
 ## [v1.4.0](https://github.com/hdwallet-io/python-bip38/tree/v1.4.0) (2025-07-09)
 
 [Full Changelog](https://github.com/hdwallet-io/python-bip38/compare/v1.3.1...v1.4.0)
